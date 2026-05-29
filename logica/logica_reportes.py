@@ -3,7 +3,7 @@
 # Sin SQL directo ni widgets Tkinter.
 
 from datos.datos_producto   import listar_activos
-from datos.datos_movimiento import movimientos_por_periodo
+from datos.datos_movimiento import movimientos_por_periodo, rotacion_por_periodo
 from datos.datos_alerta     import listar_historico
 
 
@@ -67,6 +67,7 @@ def reporte_valorizacion() -> dict:
 def reporte_rotacion(fecha_desde=None, fecha_hasta=None) -> dict:
     """
     Rotación de stock por SKU en el período indicado.
+    La agregación ocurre en MySQL — no trae filas individuales a Python.
 
     Retorna:
     {
@@ -79,40 +80,21 @@ def reporte_rotacion(fecha_desde=None, fecha_hasta=None) -> dict:
       "periodo": {"desde": str|None, "hasta": str|None},
     }
     """
-    movimientos = movimientos_por_periodo(fecha_desde, fecha_hasta)
+    filas = rotacion_por_periodo(fecha_desde, fecha_hasta)
 
-    # Acumular por SKU
-    acum = {}
-    for m in movimientos:
-        sku = m["stock_code"]
-        if sku not in acum:
-            acum[sku] = {
-                "stock_code":      sku,
-                "descripcion":     m["descripcion"],
-                "clasificacion_abc": m.get("clasificacion_abc", "—"),
-                "entradas":        0,
-                "salidas":         0,
-                "devoluciones":    0,
-                "ajustes":         0,
-                "total_movimientos": 0,
-            }
-        tipo = m["tipo_movimiento"]
-        if tipo == "ENTRADA":
-            acum[sku]["entradas"]     += int(m["cantidad"])
-        elif tipo == "SALIDA":
-            acum[sku]["salidas"]      += int(m["cantidad"])
-        elif tipo == "DEVOLUCION":
-            acum[sku]["devoluciones"] += int(m["cantidad"])
-        elif tipo == "AJUSTE":
-            acum[sku]["ajustes"]      += 1
-        acum[sku]["total_movimientos"] += 1
+    # Normalizar tipos numéricos que MySQL puede devolver como Decimal
+    for f in filas:
+        f["entradas"]         = int(f["entradas"])
+        f["salidas"]          = int(f["salidas"])
+        f["devoluciones"]     = int(f["devoluciones"])
+        f["ajustes"]          = int(f["ajustes"])
+        f["total_movimientos"] = int(f["total_movimientos"])
 
-    filas = sorted(acum.values(),
-                   key=lambda x: x["total_movimientos"], reverse=True)
+    total = sum(f["total_movimientos"] for f in filas)
 
     return {
         "productos":        filas,
-        "total_movimientos": len(movimientos),
+        "total_movimientos": total,
         "periodo": {
             "desde": str(fecha_desde) if fecha_desde else None,
             "hasta": str(fecha_hasta) if fecha_hasta else None,

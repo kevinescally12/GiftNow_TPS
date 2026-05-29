@@ -92,6 +92,25 @@ def actualizar_clasificacion(producto_id: int, categoria: str) -> None:
         cerrar_conexion(conexion, cursor)
 
 
+def actualizar_clasificaciones_bulk(updates: list) -> None:
+    """UPDATE clasificacion_abc para todos los productos en una sola transacción.
+    updates = [(categoria, producto_id), ...]"""
+    if not updates:
+        return
+    conexion = None
+    cursor = None
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.executemany(
+            "UPDATE producto SET clasificacion_abc = %s WHERE producto_id = %s;",
+            updates
+        )
+        conexion.commit()
+    finally:
+        cerrar_conexion(conexion, cursor)
+
+
 def insertar_producto(stock_code: str, descripcion: str, stock_actual: int,
                       stock_minimo: int, precio_unitario: float,
                       usuario_alta_id: int,

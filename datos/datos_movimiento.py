@@ -126,3 +126,44 @@ def movimientos_por_periodo(fecha_desde=None,
         return cursor.fetchall()
     finally:
         cerrar_conexion(conexion, cursor)
+
+
+def rotacion_por_periodo(fecha_desde=None,
+                          fecha_hasta=None) -> list[dict]:
+    """Rotación de stock agrupada por SKU — agregación en MySQL.
+    Retorna ~5 000 filas en vez de traer todos los movimientos a Python."""
+    conexion = None
+    cursor = None
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(dictionary=True)
+
+        condiciones = []
+        params = []
+
+        if fecha_desde is not None:
+            condiciones.append("m.fecha_hora >= %s")
+            params.append(fecha_desde)
+        if fecha_hasta is not None:
+            condiciones.append("m.fecha_hora <= %s")
+            params.append(fecha_hasta)
+
+        where = ("WHERE " + " AND ".join(condiciones)) if condiciones else ""
+
+        sql = (
+            "SELECT p.stock_code, p.descripcion, p.clasificacion_abc, "
+            "       SUM(CASE WHEN m.tipo_movimiento='ENTRADA'    THEN m.cantidad ELSE 0 END) AS entradas, "
+            "       SUM(CASE WHEN m.tipo_movimiento='SALIDA'     THEN m.cantidad ELSE 0 END) AS salidas, "
+            "       SUM(CASE WHEN m.tipo_movimiento='DEVOLUCION' THEN m.cantidad ELSE 0 END) AS devoluciones, "
+            "       SUM(CASE WHEN m.tipo_movimiento='AJUSTE'     THEN 1          ELSE 0 END) AS ajustes, "
+            "       COUNT(*) AS total_movimientos "
+            "FROM movimiento m "
+            "JOIN producto p ON m.producto_id = p.producto_id "
+            f"{where} "
+            "GROUP BY p.producto_id, p.stock_code, p.descripcion, p.clasificacion_abc "
+            "ORDER BY total_movimientos DESC;"
+        )
+        cursor.execute(sql, params)
+        return cursor.fetchall()
+    finally:
+        cerrar_conexion(conexion, cursor)

@@ -2,7 +2,7 @@
 # Capa de negocio — clasificación ABC del inventario.
 # Sin SQL directo ni widgets Tkinter.
 
-from datos.datos_producto import listar_activos, actualizar_clasificacion
+from datos.datos_producto import listar_activos, actualizar_clasificaciones_bulk
 
 
 def recalcular_abc() -> None:
@@ -13,13 +13,12 @@ def recalcular_abc() -> None:
     4. Acumular % del total:
          0-70%  → A  |  70-90% → B  |  90-100% → C
     5. Si valor_global == 0: retornar sin modificar.
-    6. UPDATE clasificacion_abc para cada producto.
+    6. UPDATE clasificacion_abc para todos en una sola transacción.
     """
     productos = listar_activos()
     if not productos:
         return
 
-    # Calcular valor total por producto
     for p in productos:
         p["_valor"] = float(p["stock_actual"]) * float(p["precio_unitario"])
 
@@ -27,19 +26,14 @@ def recalcular_abc() -> None:
     if valor_global == 0:
         return
 
-    # Ordenar de mayor a menor valor
     productos.sort(key=lambda p: p["_valor"], reverse=True)
 
     acumulado = 0.0
+    updates = []
     for p in productos:
         acumulado += p["_valor"]
         pct = acumulado / valor_global
+        categoria = "A" if pct <= 0.70 else ("B" if pct <= 0.90 else "C")
+        updates.append((categoria, p["producto_id"]))
 
-        if pct <= 0.70:
-            categoria = "A"
-        elif pct <= 0.90:
-            categoria = "B"
-        else:
-            categoria = "C"
-
-        actualizar_clasificacion(p["producto_id"], categoria)
+    actualizar_clasificaciones_bulk(updates)

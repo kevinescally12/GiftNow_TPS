@@ -135,21 +135,15 @@ class FormMovimiento(tk.Toplevel):
                  row=4, column=0, sticky="w", padx=16, pady=(0, 2))
         self.entry_ref = self._mk_entry(p2)
         self.entry_ref.grid(row=5, column=0, sticky="ew",
-                            padx=16, pady=(0, 14))
+                            padx=16, pady=(0, 10))
 
-        # ── Panel ajuste (oculto por defecto) ────────────────────────────
-        self.panel_ajuste = self._panel(outer)
-        # no hacemos pack aquí — se muestra dinámicamente
-
-        tk.Label(self.panel_ajuste,
-                 text="Motivo del ajuste  [obligatorio para AJUSTE]",
-                 font=FUENTE_LABEL, bg=COLOR_PANEL,
-                 fg=COLOR_WARN, anchor="w").grid(
-                 row=0, column=0, sticky="w", padx=16, pady=(14, 2))
-        self.entry_motivo = self._mk_entry(self.panel_ajuste)
-        self.entry_motivo.grid(row=1, column=0, sticky="ew",
+        self.lbl_motivo = tk.Label(p2, text="Motivo  (opcional)",
+                                   font=FUENTE_LABEL, bg=COLOR_PANEL,
+                                   fg=COLOR_TEXTO, anchor="w")
+        self.lbl_motivo.grid(row=6, column=0, sticky="w", padx=16, pady=(0, 2))
+        self.entry_motivo = self._mk_entry(p2)
+        self.entry_motivo.grid(row=7, column=0, sticky="ew",
                                padx=16, pady=(0, 14))
-        self.panel_ajuste.columnconfigure(0, weight=1)
 
         # ── Resultado ────────────────────────────────────────────────────
         self.lbl_resultado = tk.Label(outer, text="", font=FUENTE_INFO,
@@ -203,10 +197,13 @@ class FormMovimiento(tk.Toplevel):
     def _on_tipo_change(self, *args):
         tipo = self.var_tipo.get()
         if tipo == "AJUSTE":
-            self.panel_ajuste.pack(fill="x", pady=(0, 10))
+            self.lbl_motivo.config(
+                text="Motivo  [obligatorio para AJUSTE]",
+                fg=COLOR_WARN)
         else:
-            self.panel_ajuste.pack_forget()
-            self.entry_motivo.delete(0, tk.END)
+            self.lbl_motivo.config(
+                text="Motivo  (opcional)",
+                fg=COLOR_TEXTO)
         self.lbl_resultado.config(text="")
 
     def _buscar_sku(self):

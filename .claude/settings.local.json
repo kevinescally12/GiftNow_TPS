@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(Get-Process | Where-Object { $_.Name -match \"mysql|mariadb|wamp|xampp|httpd\" } | Select-Object Name, Id, CPU)"
-    ]
-  }
-}
